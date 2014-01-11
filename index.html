@@ -36,7 +36,7 @@
         <div class="well well-lg">
         <form role="form" class="form-horizontal" action="javascript:void(0);">
           <div class="form-group">
-            <label for="original-int256" class="col-sm-4 control-label">256-bit Integer in Base-56 (<em>s</em>)</label>
+            <label for="original-int256" class="col-sm-4 control-label">256-bit Integer in Base-<span data-value="DISPLAY_BASE"></span> (<em>s</em>)</label>
             <div class="col-sm-8">
               <div class="input-group">
                 <input type="text" id="original-int256" class="form-control" placeholder="Secret Integer" />
@@ -87,7 +87,7 @@
               </div>
             </div>
             <div class="form-group">
-              <label for="original-int256" class="col-sm-4 control-label">Recovered in Base-56 is:</label>
+              <label for="original-int256" class="col-sm-4 control-label">Recovered in Base-<span data-value="DISPLAY_BASE"></span> is:</label>
               <div class="col-sm-8">
                 <input type="text" id="recovered-int256" class="form-control" placeholder="Recovered Integer" readonly="readonly"/>
               </div>
@@ -113,7 +113,10 @@
       // primes do.
       var p = new BigInt("231584178474632390847141970017375815706539969331281128078915168015826259279779"), // 2^257 - 93
           checkEnableGenerateButton,
-          checkEnableRecoverSecretButton;
+          checkEnableRecoverSecretButton,
+          DISPLAY_BASE = 64; // this is just the base for translating the numbers to text
+          
+      $('[data-value="DISPLAY_BASE"]').text(''+DISPLAY_BASE);
 
       checkEnableGenerateButton = function () {
         var btn = $('#generate-pieces');
@@ -133,7 +136,7 @@
 
       $('#random-int256').on('click', function () {
         $('#original-int256')
-          .val(BigInt.randBigInt(256, 0).toString(56 /* base */))
+          .val(BigInt.randBigInt(256, 0).toString(DISPLAY_BASE))
           .trigger('change')
       });
 
@@ -146,7 +149,7 @@
         .on('keyup', checkEnableRecoverSecretButton);
 
       $('#generate-pieces').on('click', function () {
-        var s = new BigInt($('#original-int256').val(), 56 /* base */),
+        var s = new BigInt($('#original-int256').val(), DISPLAY_BASE),
             n = parseInt($('#pieces-n').val()),
             k = parseInt($('#pieces-k').val()),
             textarea = $('#generated-pieces'),
@@ -157,7 +160,7 @@
         }
         tc = new ThresholdCrypto(256 /* bits */, n, k, p /* global constant */);
         $.each(tc.encrypt(s), function (_, piece) {
-          textarea.val(textarea.val() + piece.x.toString(56 /* base */) + "," + piece.y.toString(56) + '\n\n');
+          textarea.val(textarea.val() + piece.x.toString(DISPLAY_BASE) + "," + piece.y.toString(DISPLAY_BASE) + '\n\n');
         });
       });
 
@@ -167,11 +170,11 @@
             k = parseInt($('#pieces-k').val()),
             tc;
         pieces = $.map($('#recovery-pieces').val().split("\n"), function (piece) {
-          var base56coords = piece.trim().split(',');
-          if (base56coords.length !== 2) { return }
+          var base_coords = piece.trim().split(',');
+          if (base_coords.length !== 2) { return }
           return {
-            x: new BigInt(base56coords[0], 56 /* base */),
-            y: new BigInt(base56coords[1], 56 /* base */),
+            x: new BigInt(base_coords[0], DISPLAY_BASE),
+            y: new BigInt(base_coords[1], DISPLAY_BASE),
           }
         });
         if (pieces.length < k) {
@@ -179,7 +182,7 @@
           return
         }
         tc = new ThresholdCrypto(256, n, k, p);
-        $('#recovered-int256').val(tc.decrypt(pieces).toString(56 /* base */));
+        $('#recovered-int256').val(tc.decrypt(pieces).toString(DISPLAY_BASE));
       });
     });
   </script>
