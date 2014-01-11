@@ -1,3 +1,5 @@
+### [See the Demo!](http://karlgluck.github.io/ThresholdJS)
+
 What is ThresholdJS?
 ====================
 
