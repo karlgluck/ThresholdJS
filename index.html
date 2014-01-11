@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ThresholdJS - Shamir's Secret Sharing in Javascript</title>
+    
+    <!-- Bootstrap boilerplate -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+    
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="container">
+        <div class="page-header">
+          <h1>Threshold Crypto Examples</h1>
+          <p class="lead">
+             Demonstrates using ThresholdCryptoJS to break a 256-bit integer <code>s</code> into
+             <code>n</code> pieces such that it takes <code>k</code> of those pieces
+             to reassemble the original number.
+          </p>
+        </div>
+        <h3>Quickstart</h3>
+        <ol>
+          <li>Click "Random" to generate a secret 256-bit integer</li>
+          <li>Click "Generate" to run the algorithm</li>
+          <li>Copy any 4 rows from the "Generated Pieces" text area. These are the pieces of your number.</li>
+          <li>Paste them in the "Pieces for Recovery" text area </li>
+          <li>Hit "Recover Secret" and watch your original number reappear. Try it with 4 different rows. Magic!</li>
+        </ol>
+        <hr />
+        <h3>Splitting the Secret</h3>
+        <div class="well well-lg">
+        <form role="form" class="form-horizontal" action="javascript:void(0);">
+          <div class="form-group">
+            <label for="original-int256" class="col-sm-4 control-label">256-bit Integer in Base-56 (<em>s</em>)</label>
+            <div class="col-sm-8">
+              <div class="input-group">
+                <input type="text" id="original-int256" class="form-control" placeholder="Secret Integer" />
+                <div class="input-group-btn">
+                  <button id="random-int256" class="btn btn-default">Random</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="pieces-n" class="col-sm-4 control-label">Pieces to Create (<em>n</em>)</label>
+            <div class="col-sm-8">
+            <input type="text" id="pieces-n" class="form-control" placeholder="Pieces" value="10" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="pieces-k" class="col-sm-4 control-label">Min. Pieces to Recover (<em>k</em>)</label>
+            <div class="col-sm-8">
+              <input type="text" id="pieces-k" class="form-control" placeholder="The 'threshold' value"  value="4" />
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-sm-offset-4 col-sm-8">
+            <button id="generate-pieces" class="btn btn-primary" disabled="disabled">Generate Shards</button>
+            </div>
+          </div>
+        </form>
+        </div>
+        <h4>Generated Pieces of the Secret</h4>
+        <p>These are the <code>n</code> pieces that were created from the integer above. Pick any <code>k</code>
+           and enter them into the recovery section to test it out.</p>
+        <textarea id="generated-pieces" class="form-control" rows="11" placeholder="Hit 'Generate Shards'"></textarea>
+        
+        <hr />
+
+        <h3>Recovering the Secret</h3>
+        <div class="well well-lg">
+          <form role="form" action="javascript:void(0);" class="form-horizontal">
+            <div class="form-group">
+              <label for="recovery" class="col-sm-4 control-label">Pieces for Recovery</label>
+              <div class="col-sm-8">
+                <textarea id="recovery-pieces" class="form-control" placeholder="Recovery Pieces" rows="6"></textarea>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="col-sm-offset-4 col-sm-8">
+              <button id="recover" class="btn btn-primary" disabled="disabled">Recover Secret</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="original-int256" class="col-sm-4 control-label">Recovered in Base-56 is:</label>
+              <div class="col-sm-8">
+                <input type="text" id="recovered-int256" class="form-control" placeholder="Recovered Integer" readonly="readonly"/>
+              </div>
+            </div>
+          </form>
+        </div>
+        <span id="rand-big-int">{{random}}</span>
+
+      </div>
+    </div>
+    
+    
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+    <script src="BigInt.js"></script>
+    <script src="threshold.js"></script>
+  </body>
+  <script type="text/javascript">
+    $(function () {
+
+      // 'p' is a prime constant just barely larger than 2^256. It allows us to run the algorithm
+      // in one step without having to split the secrets as other algorithms which use smaller
+      // primes do.
+      var p = new BigInt("231584178474632390847141970017375815706539969331281128078915168015826259279779"), // 2^257 - 93
+          checkEnableGenerateButton,
+          checkEnableRecoverSecretButton;
+
+      checkEnableGenerateButton = function () {
+        var btn = $('#generate-pieces');
+        if ($(this).val().length) {
+          btn.removeAttr('disabled');
+        } else { btn.attr('disabled', 'disabled'); }
+        $('#generated-pieces').val('');
+      };
+
+      checkEnableRecoverSecretButton = function () {
+        var btn = $('#recover');
+        if ($(this).val().length) {
+          btn.removeAttr('disabled');
+        } else { btn.attr('disabled', 'disabled'); }
+        $('#recovered-int256').val('');
+      };
+
+      $('#random-int256').on('click', function () {
+        $('#original-int256')
+          .val(BigInt.randBigInt(256, 0).toString(56 /* base */))
+          .trigger('change')
+      });
+
+      $('#original-int256')
+        .on('change', checkEnableGenerateButton)
+        .on('keyup', checkEnableGenerateButton);
+
+      $('#recovery-pieces')
+        .on('change', checkEnableRecoverSecretButton)
+        .on('keyup', checkEnableRecoverSecretButton);
+
+      $('#generate-pieces').on('click', function () {
+        var s = new BigInt($('#original-int256').val(), 56 /* base */),
+            n = parseInt($('#pieces-n').val()),
+            k = parseInt($('#pieces-k').val()),
+            textarea = $('#generated-pieces'),
+            tc;
+        if (isNaN(n) || isNaN(k)) {
+          alert("Check n/k");
+          return
+        }
+        tc = new ThresholdCrypto(256 /* bits */, n, k, p /* global constant */);
+        $.each(tc.encrypt(s), function (_, piece) {
+          textarea.val(textarea.val() + piece.x.toString(56 /* base */) + "," + piece.y.toString(56) + '\n\n');
+        });
+      });
+
+      $('#recover').on('click', function () {
+        var pieces = [],
+            n = parseInt($('#pieces-n').val()),
+            k = parseInt($('#pieces-k').val()),
+            tc;
+        pieces = $.map($('#recovery-pieces').val().split("\n"), function (piece) {
+          var base56coords = piece.trim().split(',');
+          if (base56coords.length !== 2) { return }
+          return {
+            x: new BigInt(base56coords[0], 56 /* base */),
+            y: new BigInt(base56coords[1], 56 /* base */),
+          }
+        });
+        if (pieces.length < k) {
+          alert("More pieces are needed for recovery! Must have at least " + k);
+          return
+        }
+        tc = new ThresholdCrypto(256, n, k, p);
+        $('#recovered-int256').val(tc.decrypt(pieces).toString(56 /* base */));
+      });
+    });
+  </script>
+</html>
